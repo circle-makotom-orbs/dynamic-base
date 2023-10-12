@@ -1,0 +1,27 @@
+description: Determine the base branch and call the continuation pipeline with a dynamically-generated set of parameters
+
+parameters:
+  continue-config-path:
+    description: Path to the config.yml to be used for continuation
+    type: string
+  parameter-conditions:
+    description: Tab-separated rows to relate filepath grep patterns (1st column) and parameter names to assert if there is a change in matched files (2nd column)
+    type: string
+  default-branch:
+    description: Default base branch
+    type: string
+    default: main
+  force-all:
+    description: Emergency valve - forcibly set all the parameters
+    type: boolean
+    default: false
+
+steps:
+  - run:
+      name: Determine base and continue a pipeline
+      command: << include(scripts/determine-base-and-continue-with-params.sh) >>
+      environment:
+        CONTINUE_CONFIG_PATH: << parameters.continue-config-path >>
+        PARAMETER_CONDITIONS: << parameters.parameter-conditions >>
+        DEFAULT_BRANCH: << parameters.default-branch >>
+        FORCE_ALL: << parameters.force-all >>

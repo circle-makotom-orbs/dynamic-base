@@ -1,0 +1,7 @@
+version: 2.1
+
+description: The dynamic-base orb - determine the base branch dynamically and continue a pipeline with conditional parameters
+
+display:
+  home_url: "https://makotom.org/"
+  source_url: "https://github.com/circle-makotom-orbs/dynamic-base"

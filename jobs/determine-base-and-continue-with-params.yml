@@ -1,0 +1,28 @@
+description: Determine the base branch dynamically and continue a pipeline with conditional parameters
+
+parameters:
+  continue-config-path:
+    description: Path to the config.yml to be used for continuation
+    type: string
+  parameter-conditions:
+    description: Tab-separated rows to relate filepath grep patterns (1st column) and parameter names to assert if there is a change in matched files (2nd column)
+    type: string
+  default-branch:
+    description: Default base branch
+    type: string
+    default: main
+  force-all:
+    description: Emergency valve - forcibly set all the parameters
+    type: boolean
+    default: false
+
+executor: default
+
+steps:
+  - checkout
+  - run: pip install jq
+  - determine-base-and-continue-with-params:
+      continue-config-path: << parameters.continue-config-path >>
+      parameter-conditions: << parameters.parameter-conditions >>
+      default-branch: << parameters.default-branch >>
+      force-all: << parameters.force-all >>
