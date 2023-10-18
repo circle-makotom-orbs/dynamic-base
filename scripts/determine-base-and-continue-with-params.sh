@@ -31,7 +31,7 @@ get_nearest_branch() {
     echo
 
     nearest_branch=""
-    nearest_branch_fork_generation=500
+    nearest_branch_fork_generation=1000 # Magic number
 
     hashes_in_history="$(git log --format=tformat:%H | head -n "${nearest_branch_fork_generation}")"
 
@@ -62,6 +62,34 @@ get_nearest_branch() {
     else
         echo Nearest branch was not found.
     fi
+}
+
+examine_diffs_and_generate_params() {
+    diffs=$(
+        cat <<EOD
+$(git diff --name-only "origin/${base_branch}")
+$(git diff --name-only HEAD~1 || git ls-tree -r --name-only HEAD)
+EOD
+    )
+
+    while read -r cond; do
+        pattern=$(cut -d$'\t' -f1 <<<"${cond}")
+        param_name=$(cut -d$'\t' -f2 <<<"${cond}")
+
+        if [[ -z "${param_name}" ]]; then
+            continue
+        fi
+
+        # Truthy if:
+        #   1)  `force-all` is set to `true`,
+        #   2)  there is any difference against `${base_branch}` or `HEAD~1` (the previous commit), or
+        #   3)  there is no `HEAD~1` (i.e., this is the very first commit for the repo).
+        if [[ "${FORCE_ALL}" == 'true' ]] || grep -qs "^${pattern}\$" <<<"${diffs}"; then
+            export param_name
+            continue_parameters="$(jq '.[$ENV.param_name] = true' <<<"${continue_parameters}")"
+            unset param_name
+        fi
+    done <<<"${PARAMETER_CONDITIONS}"
 }
 
 if [[ ! -v CIRCLE_CONTINUATION_KEY ]]; then
@@ -96,27 +124,7 @@ echo Fetching the branch from remote:
 git fetch origin "${base_branch}"
 echo
 
-diffs=$(
-    cat <<EOD
-$(git diff --name-only "origin/${base_branch}")
-$(git diff --name-only HEAD~1 || git ls-tree -r --name-only HEAD)
-EOD
-)
-
-while read -r cond; do
-    pattern=$(cut -d$'\t' -f1 <<<"${cond}")
-    param_name=$(cut -d$'\t' -f2 <<<"${cond}")
-
-    # Truthy if:
-    #   1)  `force-all` is set to `true`,
-    #   2)  there is any difference against `${base_branch}` or `HEAD~1` (the previous commit), or
-    #   3)  there is no `HEAD~1` (i.e., this is the very first commit for the repo).
-    if [[ "${FORCE_ALL}" == 'true' ]] || grep -qs "^${pattern}\$" <<<"${diffs}"; then
-        export param_name
-        continue_parameters="$(jq '.[$ENV.param_name] = true' <<<"${continue_parameters}")"
-        unset param_name
-    fi
-done <<<"${PARAMETER_CONDITIONS}"
+examine_diffs_and_generate_params
 
 continue_body="$(jq \
     --rawfile config "${CONTINUE_CONFIG_PATH}" \
@@ -128,9 +136,9 @@ continue_body="$(jq \
 echo
 
 echo Continuing...!
-curl \
+[[ $(curl \
     -X POST \
     -H "Content-Type: application/json" \
     --data-binary "${continue_body}" \
     -w '\n%{http_code}\n' \
-    "https://circleci.com/api/v2/pipeline/continue"
+    "https://circleci.com/api/v2/pipeline/continue" |& tee /dev/stderr | tail -n 1) == "200" ]]
