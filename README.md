@@ -2,6 +2,8 @@
 
 ## Example usage
 
+Prerequisite: Configure `GITHUB_API_TOKEN` project environment variable with a GitHub PAT that can access PRs of interest first.
+
 ```
 version: 2.1
 
