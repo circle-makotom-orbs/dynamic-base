@@ -1,6 +1,9 @@
 description: Determine the base branch dynamically and continue a pipeline with conditional parameters
 
 parameters:
+  github-api-token:
+    description: GitHub API Access Token
+    type: string
   continue-config-path:
     description: Path to the config.yml to be used for continuation
     type: string
@@ -22,6 +25,7 @@ steps:
   - checkout
   - run: pip install jq
   - determine-base-and-continue-with-params:
+      github-api-token: << parameters.github-api-token >>
       continue-config-path: << parameters.continue-config-path >>
       parameter-conditions: << parameters.parameter-conditions >>
       default-branch: << parameters.default-branch >>

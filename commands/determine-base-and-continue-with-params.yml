@@ -1,6 +1,9 @@
 description: Determine the base branch and call the continuation pipeline with a dynamically-generated set of parameters
 
 parameters:
+  github-api-token:
+    description: GitHub API Access Token
+    type: string
   continue-config-path:
     description: Path to the config.yml to be used for continuation
     type: string
@@ -21,6 +24,7 @@ steps:
       name: Determine base and continue a pipeline
       command: << include(scripts/determine-base-and-continue-with-params.sh) >>
       environment:
+        GITHUB_API_TOKEN: << parameters.github-api-token >>
         CONTINUE_CONFIG_PATH: << parameters.continue-config-path >>
         PARAMETER_CONDITIONS: << parameters.parameter-conditions >>
         DEFAULT_BRANCH: << parameters.default-branch >>
